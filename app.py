@@ -25,7 +25,8 @@ archivos = {
     "Recuerdo Logico Diferido": "RecuerdoLogicoDiferido.csv",
     "Aprendizaje Serial": "AprendizajeSerial.csv",
     "Rec. Clave Semántica": "RecConClaveSemantica.csv",
-    "Recuerdo Serial": "RecuerdoSerial.csv"
+    "Recuerdo Serial": "RecuerdoSerial.csv",
+    "Reconocimiento": "Reconocimiento.csv"
 }
 
 # Cargar referencias
