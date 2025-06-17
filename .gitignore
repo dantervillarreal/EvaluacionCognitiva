@@ -1,0 +1,15 @@
+# Ignorar archivo de resultados
+resultados.csv
+
+# Carpetas de caché y temporales
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Streamlit config y logs
+.streamlit/
+*.log
