@@ -3,6 +3,9 @@ import pandas as pd
 from datetime import datetime
 import os
 
+# Define nombre del archivo de resultados (debe estar definido antes de usarse)
+archivo_resultados = "resultados.csv"
+
 # Función para calcular z-score
 def calcular_estandarizado(edad, puntaje_bruto, df_referencia):
     ref = df_referencia[df_referencia["Edad"] == edad]
@@ -14,7 +17,7 @@ def calcular_estandarizado(edad, puntaje_bruto, df_referencia):
     return None
 
 # Título
-st.title("🧠 Calculadora de Puntaje Estandarizado con Historial")
+st.title("🧠 Calculadora de Puntaje Estandarizado - Evaluación Cognitiva")
 
 # Cargar todas las referencias
 archivos = {
@@ -44,6 +47,7 @@ with st.form("formulario_paciente"):
     puntaje_bruto = st.number_input("Puntaje bruto", format="%.2f")
     submit = st.form_submit_button("Calcular y guardar")
 
+# Si se envió el formulario
 if submit:
     # Calcular resultados
     resultados = {}
@@ -68,21 +72,19 @@ if submit:
     }
     registro.update(resultados)
 
-    archivo_resultados = "resultados.csv"
-    existe = os.path.isfile(archivo_resultados)
-
     df_resultados = pd.DataFrame([registro])
 
-    if existe:
+    if os.path.exists(archivo_resultados):
         df_resultados.to_csv(archivo_resultados, mode='a', header=False, index=False)
     else:
         df_resultados.to_csv(archivo_resultados, mode='w', header=True, index=False)
 
-    st.success("✅ Resultados guardados en `resultados.csv`")
+    st.success("✅ Resultados guardados correctamente.")
 
-    # Mostrar historial guardado
+# Mostrar historial si existe
 if os.path.exists(archivo_resultados):
     st.subheader("📋 Historial de cálculos anteriores")
     historial = pd.read_csv(archivo_resultados)
     st.dataframe(historial)
-
+else:
+    st.info("No hay historial guardado todavía.")
