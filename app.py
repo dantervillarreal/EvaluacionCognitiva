@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import csv
 
-# Archivo donde se guarda el historial
+# Archivo de resultados
 archivo_resultados = "resultados.csv"
 
 # Función para calcular z-score
@@ -16,91 +17,108 @@ def calcular_estandarizado(edad, puntaje_bruto, df_referencia):
             return round((puntaje_bruto - media) / desv, 2)
     return None
 
-# Título
-st.title("🧠 Evaluación Cognitiva - Múltiples Pruebas")
-
-# Archivos de referencia (1 por prueba)
+# Archivos de referencia por prueba
 archivos = {
-    "Recuerdo Logico Inmediato": "RecuerdoLogicoInmediato.csv",
-    "Recuerdo Logico Diferido": "RecuerdoLogicoDiferido.csv",
+    "Recuerdo Lógico Inmediato": "RecuerdoLogicoInmediato.csv",
+    "Recuerdo Lógico Diferido": "RecuerdoLogicoDiferido.csv",
     "Aprendizaje Serial": "AprendizajeSerial.csv",
     "Rec. Clave Semántica": "RecConClaveSemantica.csv",
     "Recuerdo Serial": "RecuerdoSerial.csv",
     "Reconocimiento": "Reconocimiento.csv"
 }
 
-# Cargar referencias
+# Cargar CSVs
 referencias = {}
 error = False
-
 for nombre_prueba, archivo_csv in archivos.items():
     try:
-        referencias[nombre_prueba] = pd.read_csv(archivo_csv)
+        df = pd.read_csv(archivo_csv)
+        df.columns = df.columns.str.strip()
+        referencias[nombre_prueba] = df
     except FileNotFoundError:
         st.error(f"❌ No se encontró el archivo: `{archivo_csv}`")
         error = True
-
 if error:
     st.stop()
 
-# Formulario de ingreso
+# ---------------------
+# 🧍 Datos del paciente
+# ---------------------
+st.title("🧠 Evaluación Cognitiva - Puntajes Estandarizados")
+
+st.subheader("🧍 Datos del paciente")
 with st.form("formulario_paciente"):
-    nombre = st.text_input("Nombre del paciente")
-    edad = st.number_input("Edad del paciente", min_value=1, max_value=120, step=1)
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        nombre = st.text_input("Nombre")
+    with col2:
+        edad = st.number_input("Edad", min_value=1, max_value=120, step=1)
 
+    st.divider()
+
+    # ---------------------
+    # 📝 Puntajes brutos
+    # ---------------------
+    st.subheader("📝 Puntajes brutos por prueba")
     puntajes_brutos = {}
-    for nombre_prueba in archivos.keys():
-        puntajes_brutos[nombre_prueba] = st.number_input(
-            f"Puntaje bruto - {nombre_prueba}",
-            format="%.2f"
-        )
+    col1, col2 = st.columns(2)
+    nombres_pruebas = list(archivos.keys())
+    for i in range(0, len(nombres_pruebas), 2):
+        with col1:
+            prueba1 = nombres_pruebas[i]
+            puntajes_brutos[prueba1] = st.number_input(prueba1, format="%.2f", key=f"bruto_{prueba1}")
+        if i + 1 < len(nombres_pruebas):
+            with col2:
+                prueba2 = nombres_pruebas[i + 1]
+                puntajes_brutos[prueba2] = st.number_input(prueba2, format="%.2f", key=f"bruto_{prueba2}")
 
-    submit = st.form_submit_button("Calcular y guardar")
+    st.divider()
+    submit = st.form_submit_button("✅ Calcular y guardar resultados")
 
-# Procesamiento
+# ---------------------
+# 📊 Resultados
+# ---------------------
 if submit:
-    st.subheader(f"🧾 Resultados para {nombre} (edad {edad}):")
-
     resultados = {}
     for nombre_prueba, df_ref in referencias.items():
         bruto = puntajes_brutos[nombre_prueba]
-        resultado = calcular_estandarizado(edad, bruto, df_ref)
-        resultados[nombre_prueba] = resultado
-        if resultado is not None:
-            st.markdown(f"**{nombre_prueba}**: {resultado}")
-        else:
-            st.markdown(f"**{nombre_prueba}**: ⚠️ No hay referencia o desviación 0")
+        z = calcular_estandarizado(edad, bruto, df_ref)
+        resultados[nombre_prueba] = z
 
-    # Guardar resultados
+    st.subheader("📊 Puntajes estandarizados")
+    col1, col2 = st.columns(2)
+    for i, (prueba, z) in enumerate(resultados.items()):
+        col = col1 if i % 2 == 0 else col2
+        with col:
+            if z is not None:
+                st.metric(label=prueba, value=f"{z:.2f}")
+            else:
+                st.warning(f"{prueba}: sin datos para esta edad")
+
+    # Guardar resultado
     registro = {
         "Nombre": nombre,
         "Edad": edad,
         "Fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
-    # Guardar todos los puntajes brutos y estandarizados
     for nombre_prueba in archivos.keys():
         registro[f"{nombre_prueba} - Bruto"] = puntajes_brutos[nombre_prueba]
         registro[f"{nombre_prueba} - Z"] = resultados[nombre_prueba]
 
     df_resultados = pd.DataFrame([registro])
-
     if os.path.exists(archivo_resultados):
-        df_resultados.to_csv(archivo_resultados, mode='a', header=False, index=False)
+        df_resultados.to_csv(archivo_resultados, mode='a', header=False, index=False, quoting=csv.QUOTE_MINIMAL)
     else:
-        df_resultados.to_csv(archivo_resultados, mode='w', header=True, index=False)
+        df_resultados.to_csv(archivo_resultados, mode='w', header=True, index=False, quoting=csv.QUOTE_MINIMAL)
 
     st.success("✅ Resultados guardados correctamente.")
 
-# Mostrar historial si existe
+# ---------------------
+# 📋 Historial
+# ---------------------
 if os.path.exists(archivo_resultados):
-    st.subheader("📋 Historial de cálculos anteriores")
-    # historial = pd.read_csv(archivo_resultados)
-    # st.dataframe(historial)
-    try:
+    st.divider()
+    with st.expander("📋 Ver historial de cálculos anteriores"):
         historial = pd.read_csv(archivo_resultados)
-        st.subheader("📋 Historial de cálculos anteriores")
-        st.dataframe(historial)
-    except pd.errors.ParserError:
-        st.error("⚠️ El archivo resultados.csv está corrupto o mal formateado. Abrilo manualmente y revisá las filas.")
-else:
-    st.info("No hay historial guardado todavía.")
+        st.dataframe(historial, use_container_width=True)
+        st.download_button("⬇️ Descargar historial CSV", data=historial.to_csv(index=False), file_name="resultados.csv", mime="text/csv")
