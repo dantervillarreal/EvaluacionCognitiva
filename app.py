@@ -60,10 +60,18 @@ with st.form("formulario_paciente"):
     # 📝 Puntajes brutos
     # ---------------------
     st.subheader("📝 Puntajes brutos por prueba")
+    # Orden fijo y correcto para todas las plataformas
+    nombres_pruebas = [
+        "Recuerdo Lógico Inmediato",
+        "Recuerdo Lógico Diferido",
+        "Aprendizaje Serial",
+        "Recuerdo Serial",
+        "Rec. Clave Semántica",
+        "Reconocimiento"
+    ]
     puntajes_brutos = {}
-    col1, col2 = st.columns(2)
-    nombres_pruebas = list(archivos.keys())
     for i in range(0, len(nombres_pruebas), 2):
+        col1, col2 = st.columns(2)
         with col1:
             prueba1 = nombres_pruebas[i]
             puntajes_brutos[prueba1] = st.number_input(prueba1, format="%.2f", key=f"bruto_{prueba1}")
